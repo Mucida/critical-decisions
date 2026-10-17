@@ -1,0 +1,17 @@
+{
+  "name": "critical-decisions",
+  "version": "0.1.0",
+  "description": "Tell it what is critical in your project with /alert-config. When the agent touches it, you get warned, and the agent records the decision, why it made it and what it ruled out, in a band that stays until you dismiss it.",
+  "author": {
+    "name": "Mucida",
+    "url": "https://github.com/Mucida"
+  },
+  "repository": "https://github.com/Mucida/critical-decisions",
+  "license": "MIT",
+  "keywords": [
+    "claude-code-mod",
+    "hooks",
+    "decisions",
+    "review"
+  ]
+}
