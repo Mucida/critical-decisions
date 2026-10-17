@@ -68,25 +68,25 @@ const cmd = ($: any, command: string, args = '') => $.command.run({ command, arg
 const edit = ($: any, file_path: string, new_string: string) => $.tool.call({ tool: 'Edit', file_path, old_string: 'a', new_string })
 const configure = async ($: any) => {
   await start($)
-  await cmd($, 'alert-config', 'prices and taxes, anything in src/billing, sql migrations')
+  await cmd($, 'critical-areas', 'prices and taxes, anything in src/billing, sql migrations')
 }
 
-test('without config nothing is flagged and /alert-config explains how to set it', async ($, on) => {
+test('without config nothing is flagged and /critical-areas explains how to set it', async ($, on) => {
   base(on)
   await start($)
   const r = await edit($, '/proj/src/billing/a.ts', 'unit_price = 2')
   expect(g.toasts.length).toBe(0)
   expect(r.context).toBe(undefined)
-  const shown = await cmd($, 'alert-config')
-  expect(shown.text.includes('/alert-config <'), shown.text).toBe(true)
+  const shown = await cmd($, 'critical-areas')
+  expect(shown.text.includes('/critical-areas <'), shown.text).toBe(true)
 })
 
-test('/alert-config turns the text into areas, saves it per project, and shows it', async ($, on) => {
+test('/critical-areas turns the text into areas, saves it per project, and shows it', async ($, on) => {
   base(on)
   await configure($)
   expect(g.asked[0].includes('src/billing'), 'the person text goes to the model').toBe(true)
   expect(g.store.has('config:/proj'), 'saved under the cwd').toBe(true)
-  const shown = await cmd($, 'alert-config')
+  const shown = await cmd($, 'critical-areas')
   expect(shown.text.includes('pricing') && shown.text.includes('src/billing/**'), shown.text).toBe(true)
 })
 
@@ -155,7 +155,7 @@ test('the system prompt carries the rules only when configured', async ($, on) =
   await start($)
   let r = await $.prompt.compose(COMPOSE)
   expect(r.sections.some((s: any) => s.id === 'critical-decisions:rules')).toBe(false)
-  await cmd($, 'alert-config', 'prices and taxes')
+  await cmd($, 'critical-areas', 'prices and taxes')
   r = await $.prompt.compose(COMPOSE)
   const s = r.sections.find((s: any) => s.id === 'critical-decisions:rules') as any
   expect(s?.scope, 'session section').toBe('session')
@@ -166,34 +166,34 @@ test('model failure or unreadable answer saves nothing and keeps the old config'
   base(on)
   await configure($)
   g.modelReply = null
-  let r = await cmd($, 'alert-config', 'something else')
+  let r = await cmd($, 'critical-areas', 'something else')
   expect(r.text.startsWith('Nothing saved'), r.text).toBe(true)
   g.modelReply = 'sorry, I cannot'
-  r = await cmd($, 'alert-config', 'something else')
+  r = await cmd($, 'critical-areas', 'something else')
   expect(r.text.startsWith('Nothing saved'), r.text).toBe(true)
-  expect((await cmd($, 'alert-config')).text.includes('pricing'), 'old config kept').toBe(true)
+  expect((await cmd($, 'critical-areas')).text.includes('pricing'), 'old config kept').toBe(true)
 })
 
 test('the description can be in any language and goes to the model as written', async ($, on) => {
   base(on)
   await start($)
-  const r = await cmd($, 'alert-config', 'preço, impostos e tudo em src/billing')
+  const r = await cmd($, 'critical-areas', 'preço, impostos e tudo em src/billing')
   expect(g.asked[0], 'sent as written').toBe('preço, impostos e tudo em src/billing')
   expect(r.text.includes('preço, impostos'), r.text).toBe(true)
-  await cmd($, 'alert-config', 'limpar')
+  await cmd($, 'critical-areas', 'limpar')
   expect(g.store.has('config:/proj'), '"limpar" clears too').toBe(false)
 })
 
-test('/alert-config clear removes it', async ($, on) => {
+test('/critical-areas clear removes it', async ($, on) => {
   base(on)
   await configure($)
-  await cmd($, 'alert-config', 'clear')
+  await cmd($, 'critical-areas', 'clear')
   expect(g.store.has('config:/proj')).toBe(false)
   await edit($, '/proj/src/billing/a.ts', 'x')
   expect(g.toasts.length).toBe(0)
 })
 
-test('record_decision warns the person and /decisions lists it', async ($, on) => {
+test('record_decision warns the person and /critical-list lists it', async ($, on) => {
   base(on)
   await start($)
   const r = await $.tool.call({
@@ -206,7 +206,7 @@ test('record_decision warns the person and /decisions lists it', async ($, on) =
   expect(String(r.result).includes('recorded'), 'result').toBe(true)
   expect(g.toasts[0].includes('CRITICAL DECISION'), 'toast').toBe(true)
   expect(String(g.status).includes('Rounded'), 'status').toBe(true)
-  const list = await cmd($, 'decisions')
+  const list = await cmd($, 'critical-list')
   expect(list.text.includes('keep 4 decimals'), 'list').toBe(true)
 })
 
@@ -226,10 +226,10 @@ test('decision stays on the band across turns and prompts until ok', async ($, o
   await ui.press({ key: 'ok' })
   ui = await band($)
   expect((await texts(ui)).includes('Rounded'), 'gone after ok').toBe(false)
-  expect((await cmd($, 'decisions')).text.includes('Rounded tax'), '/decisions still lists').toBe(true)
+  expect((await cmd($, 'critical-list')).text.includes('Rounded tax'), '/critical-list still lists').toBe(true)
 })
 
-test('/ok-decisions also clears; many decisions show the last 3 and count the rest', async ($, on) => {
+test('/critical-ok also clears; many decisions show the last 3 and count the rest', async ($, on) => {
   base(on)
   await start($)
   for (const n of ['d1', 'd2', 'd3', 'd4', 'd5']) await decide($, n)
@@ -237,7 +237,7 @@ test('/ok-decisions also clears; many decisions show the last 3 and count the re
   expect(t.includes('5 critical decisions'), t).toBe(true)
   expect(t.includes('d5') && t.includes('d3') && !t.includes('d2'), t).toBe(true)
   expect(t.includes('+2'), t).toBe(true)
-  const r = await cmd($, 'ok-decisions')
+  const r = await cmd($, 'critical-ok')
   expect(r.text.includes('5'), r.text).toBe(true)
   expect((await texts(await band($))).includes('decision'), 'empty').toBe(false)
 })

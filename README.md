@@ -9,7 +9,7 @@ You describe once what is critical in your project, such as pricing rules, a sta
 - **Recorded decisions** show in a band above the prompt. The band stays until you dismiss it, across turns, so a decision does not scroll away unseen.
 
 ```
-⚠️ 2 critical decisions  [ok]  (or /ok-decisions)
+⚠️ 2 critical decisions  [ok]  (or /critical-ok)
   [14:32] (pricing) Rounded tax to 2 decimals — because the invoice shows 2
   [14:40] (migrations) Made orders.status nullable — because old rows have none
 ```
@@ -35,7 +35,7 @@ In the desktop app: click **+** next to the prompt box, then **Plugins**, **Add 
 Tell it what is critical, in your own words and in any language:
 
 ```
-/alert-config pricing and tax rules, anything in src/billing, the orders.status flow, SQL migrations
+/critical-areas pricing and tax rules, anything in src/billing, the orders.status flow, SQL migrations
 ```
 
 A small model (Haiku) turns the text into areas, each with keywords and path globs, and shows you the result:
@@ -47,17 +47,17 @@ Critical in this project: "pricing and tax rules, anything in src/billing, ..."
 • migrations — paths: **/*.sql, migrations/
 ```
 
-Naming real identifiers, files or folders gives sharper rules. Run `/alert-config` again with new text to replace the rules.
+Naming real identifiers, files or folders gives sharper rules. Run `/critical-areas` again with new text to replace the rules.
 
 The configuration is saved per project directory and kept across sessions.
 
 | Command | What it does |
 | --- | --- |
-| `/alert-config <text>` | Describe what is critical; replaces the current rules |
-| `/alert-config` | Show the current rules |
-| `/alert-config clear` | Remove them (`limpar` works too) |
-| `/decisions` | List every decision recorded in this session |
-| `/ok-decisions` | Dismiss the band (same as its **ok** button) |
+| `/critical-areas <text>` | Describe what is critical; replaces the current rules |
+| `/critical-areas` | Show the current rules |
+| `/critical-areas clear` | Remove them (`limpar` works too) |
+| `/critical-list` | List every decision recorded in this session |
+| `/critical-ok` | Dismiss the band (same as its **ok** button) |
 
 ## How it detects
 
@@ -71,7 +71,7 @@ It warns; it never blocks an edit.
 
 ## Access
 
-- **Model:** one Haiku call each time you run `/alert-config <text>`, through your own Claude Code session. Nothing else is sent anywhere.
+- **Model:** one Haiku call each time you run `/critical-areas <text>`, through your own Claude Code session. Nothing else is sent anywhere.
 - **Storage:** writes your rules to the plugin's own store, keyed by project directory.
 - **Files and shell:** reads no files and runs no commands.
 

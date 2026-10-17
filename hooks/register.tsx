@@ -60,7 +60,7 @@ export function touchedAreas(config: Config | undefined, tool: string, input: Re
 }
 
 // Turns the person's free text into areas. The model only proposes; the
-// person sees the result and can run /alert-config again.
+// person sees the result and can run /critical-areas again.
 const EXTRACT_SYSTEM = `You turn a developer's description of what is critical in their project into detection rules for a code-editing agent.
 Answer with JSON only, no prose, no code fence:
 {"areas":[{"name":"short_snake_case","keywords":["identifier or term"],"paths":["glob"]}]}
@@ -87,12 +87,12 @@ export function parseAreas(text: string): Area[] | undefined {
 }
 
 function describeConfig(c: Config | undefined): string {
-  if (!c) return 'Nothing marked as critical in this project yet.\nRun /alert-config <what is critical here>, e.g. /alert-config pricing and tax rules, anything in src/billing, database migrations'
+  if (!c) return 'Nothing marked as critical in this project yet.\nRun /critical-areas <what is critical here>, e.g. /critical-areas pricing and tax rules, anything in src/billing, database migrations'
   const rows = c.areas.map(a => {
     const bits = [a.keywords.length ? `keywords: ${a.keywords.join(', ')}` : '', a.paths.length ? `paths: ${a.paths.join(', ')}` : '']
     return `• ${a.name} — ${bits.filter(Boolean).join(' · ')}`
   })
-  return [`Critical in this project: "${c.description}"`, ...rows, '', '/alert-config <text> replaces it · /alert-config clear removes it'].join('\n')
+  return [`Critical in this project: "${c.description}"`, ...rows, '', '/critical-areas <text> replaces it · /critical-areas clear removes it'].join('\n')
 }
 
 function systemSection(c: Config): string {
@@ -144,13 +144,13 @@ export const register: Register = on => {
       },
     })) as { tool?: string } | undefined
     if (reg?.tool) toolName = reg.tool // the name the agent sees; DEFAULT_TOOL unless the plugin is renamed
-    await $.command.register({ name: 'alert-config', description: 'Describe what is critical in this project (no text: show it; "clear": remove it)' })
-    await $.command.register({ name: 'decisions', description: 'List the critical decisions recorded in this session' })
-    await $.command.register({ name: 'ok-decisions', description: 'Dismiss the critical decisions shown above the prompt' })
+    await $.command.register({ name: 'critical-areas', description: 'Describe what is critical in this project (no text: show it; "clear": remove it)' })
+    await $.command.register({ name: 'critical-list', description: 'List the critical decisions recorded in this session' })
+    await $.command.register({ name: 'critical-ok', description: 'Dismiss the critical decisions shown above the prompt' })
     return r
   })
 
-  on('command.run', { command: 'alert-config' }, async ($, e) => {
+  on('command.run', { command: 'critical-areas' }, async ($, e) => {
     const args = e.args.trim()
     if (!args) return { text: describeConfig(config) }
     if (CLEAR.has(args.toLowerCase())) {
@@ -162,7 +162,7 @@ export const register: Register = on => {
     const areas = r.isAnswered ? parseAreas(r.text) : undefined
     if (!areas) {
       const why = r.isAnswered ? 'the answer could not be read as areas' : `the model call failed (${r.reason})`
-      return { text: `Nothing saved: ${why}. Try again, naming files, folders or identifiers, e.g. /alert-config price and tax in src/billing/**, the orders.status column` }
+      return { text: `Nothing saved: ${why}. Try again, naming files, folders or identifiers, e.g. /critical-areas price and tax in src/billing/**, the orders.status column` }
     }
     config = { description: args, areas }
     await $.store.set(storeKey(cwd), config)
@@ -175,13 +175,13 @@ export const register: Register = on => {
     return { ...r, sections: [...r.sections, { id: `${PLUGIN}:rules`, text: systemSection(config), scope: 'session' as const }] }
   })
 
-  on('command.run', { command: 'decisions' }, () => ({ text: report(decisions) }))
+  on('command.run', { command: 'critical-list' }, () => ({ text: report(decisions) }))
 
-  on('command.run', { command: 'ok-decisions' }, $ => {
+  on('command.run', { command: 'critical-ok' }, $ => {
     const n = pending.length
     pending = []
     $.ui.invalidate('ui.render')
-    return { text: n ? `${n} decision(s) dismissed. /decisions still lists them all.` : 'Nothing to dismiss.' }
+    return { text: n ? `${n} decision(s) dismissed. /critical-list still lists them all.` : 'Nothing to dismiss.' }
   })
 
   // The band stays until dismissed: a toast goes away by itself, this does not.
@@ -204,12 +204,12 @@ export const register: Register = on => {
               $.ui.invalidate('ui.render')
             }}
           />
-          <Text dimColor>  (or /ok-decisions)</Text>
+          <Text dimColor>  (or /critical-ok)</Text>
         </Box>
         {shown.map(d => (
           <Text color="yellow">  [{d.time}] ({d.area}) {d.decision} <Text dimColor>— because {d.reason}</Text></Text>
         ))}
-        {hidden ? <Text dimColor>  +{hidden} earlier: /decisions</Text> : null}
+        {hidden ? <Text dimColor>  +{hidden} earlier: /critical-list</Text> : null}
       </Box>
     )
   })
