@@ -41,7 +41,7 @@ All notable changes to this mod. Versions follow [Semantic Versioning](https://s
 - Default protection with no setup, for any kind of project, and a first-use notice ([#1](https://github.com/Mucida/critical-decisions/issues/1)).
 - Keyword matching on prose files, shell commands and MCP calls ([#2](https://github.com/Mucida/critical-decisions/issues/2)).
 
-## [0.1.0] - 2026-10-19
+## [0.1.0] - 2026-10-17
 
 ### Added
 - `/critical-areas` turns a description into areas (keywords and paths); edits that touch them warn the user and remind the agent.
