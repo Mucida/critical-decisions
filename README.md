@@ -9,12 +9,9 @@ A Claude Code mod that keeps you in the loop when the agent makes a call you nev
 
 ```
 ⚠️ Critical decisions: 1 to rethink · 1 to know  [ok]  (or /critical-ok)
-  [14:40] The agent decided: to make orders.status nullable                ← red
-     Instead of: keeping it required, as it was
-     Why: old rows have no status
+  [14:40] I made orders.status nullable; it was required before. — old rows have no status     ← red
      [rethink] [not critical]  (migrations)
-  [14:32] The agent decided: to round tax to 2 decimals                    ← yellow
-     Why: the invoice shows 2
+  [14:32] I rounded tax to 2 decimals, which you had not specified. — the invoice shows 2     ← yellow
      [rethink] [not critical]  (pricing)
 ```
 
@@ -52,9 +49,7 @@ For example, you ask for a paragraph on wind power and the agent brings in solar
 
 ```
 ⚠️ Critical decisions: 1 to rethink  [ok]  (or /critical-ok)
-  [10:05] The agent decided: to add a comparison with solar panels
-     Instead of: only the paragraph on wind power, as asked
-     Why: the paragraph needed a reference point
+  [10:05] I added a comparison with solar panels; you asked only about wind power. — it gives a reference point
      [rethink] [not critical]  (general)
 ```
 
@@ -62,7 +57,7 @@ If it records something you do not care about, press **not critical**. The mod k
 
 The first time it runs in a project, a line above the prompt says the default protection is on and how to make it yours.
 
-The agent judges by itself whether a decision is critical: the mod gives it the criteria and shows you what it records. It does not run a second model over the agent's work, so a decision the agent does not see as critical can go unrecorded. Marking areas (below) narrows that gap.
+The agent writes each decision as a plain sentence in your language, saying it was its own call and what it replaced. It judges by itself whether a decision is critical: the mod gives it the criteria and shows you what it records. It does not run a second model over the agent's work, so a decision the agent does not see as critical can go unrecorded. Marking areas (below) narrows that gap.
 
 ## Configure
 

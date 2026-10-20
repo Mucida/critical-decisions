@@ -237,13 +237,16 @@ export const register: Register = on => {
           decision: {
             type: 'string',
             description:
-              'What you decided, in one sentence that starts with a verb and reads after "The agent decided:". Example: "to add a comparison with solar panels to the paragraph on wind power".',
+              'One plain sentence for the user, in the language they write in, making clear it was your call and what it replaced: something left open, or a plan you changed. Examples: "I picked a 40% margin myself, since you did not give one." / "I closed access on every table, not just the 14 in the report."',
           },
-          reason: { type: 'string', description: 'Why, in one sentence. Example: "the paragraph needed a reference point".' },
+          reason: {
+            type: 'string',
+            description: 'Why, in a few words, in the same language; shown right after the decision. Example: "it is common in 3D printing and covers machine wear".',
+          },
           alternative_ruled_out: {
             type: 'string',
             description:
-              'What the user asked for, or what you would otherwise have done, that this decision replaces. Shown to the user as "Instead of: ...". Example: "only the paragraph on wind power, as asked".',
+              'What the user asked for, or what you would otherwise have done. Listed by /critical-list. Example: "only the paragraph on wind power, as asked".',
           },
           level: {
             type: 'string',
@@ -386,10 +389,8 @@ export const register: Register = on => {
         {shown.map(d => (
           <Box key={`row-${d.id}`} flexDirection="column">
             <Text color={d.level === 'undo' ? 'red' : 'yellow'}>
-              {'  '}[{d.time}] The agent decided: <Text bold>{d.decision}</Text>
+              {'  '}[{d.time}] {d.decision} <Text dimColor>— {d.reason}</Text>
             </Text>
-            {d.alternative ? <Text dimColor>{'     '}Instead of: {d.alternative}</Text> : null}
-            <Text dimColor>{'     '}Why: {d.reason}</Text>
             <Box>
             <Text>{'     '}</Text>
             <Button
