@@ -113,7 +113,7 @@ It warns; it never blocks an edit.
 ## Access
 
 - **Model:** one Haiku call each time you run `/critical-areas <text>`, through your own Claude Code session. `/critical-areas auto` and **rethink** send one message to your own agent, only when you ask. Nothing else is sent anywhere.
-- **Tokens:** about 450 tokens of criteria in the system prompt, cached with it, plus up to about 200 for the not-critical examples. No reminder per turn; a toast's reminder only when an edit touches an area you marked.
+- **Tokens:** about 450 tokens of criteria in the system prompt, cached with it, plus up to about 200 for the not-critical examples. After the first edit or MCP write of a turn, one hidden line (about 60 tokens) reminds the agent to record a choice it made there, since agents tend to tell decisions in prose instead; it is skipped once a decision is recorded that turn. Plus a reminder when an edit touches an area you marked.
 - **Storage:** writes your rules, the not-critical examples and that you saw the first-use line to the plugin's own store, keyed by project directory.
 - **Files and shell:** reads no files and runs no commands. When the default criteria point the agent to your project's instructions, those are the ones Claude Code already gave the agent; the mod does not open them.
 

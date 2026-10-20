@@ -163,8 +163,14 @@ export function systemSection(c: Config | undefined, learned: Learned[] = []): s
     DEFAULT_CRITERIA,
     ...marked,
     ...taught,
-    'When a decision qualifies, call the record_decision tool with it, the reason, the alternative you ruled out and its level, and mention it in your reply.',
+    'When a decision qualifies, call the record_decision tool with it, the reason, the alternative you ruled out and its level, before your final reply, then mention it in the reply. Listing it only in your reply is not enough: the user sees what you record.',
   ].join('\n')
+}
+
+// After the first write of a turn with nothing recorded: where a decision is made, the
+// agent tends to tell it in prose instead of recording it. One short line per turn at most.
+function writeNudge(tool: string): string {
+  return `[${PLUGIN}] If what you just wrote carries a choice the user did not make (a value, rule, scope or assumption that changes the result, including one they left to you), call ${tool} now, before your reply; a decision told only in prose does not reach the user's band. Otherwise ignore this.`
 }
 
 function reminder(areas: string[], tool: string): string {
@@ -208,6 +214,7 @@ export const register: Register = on => {
     return was
   }
   const warned = new Set<string>() // per turn
+  let nudged = false // per turn: the write nudge went out, or a decision was recorded
 
   on('session.start', async ($, e, next) => {
     const r = await next(e)
@@ -420,6 +427,7 @@ export const register: Register = on => {
       alternative: String(i.alternative_ruled_out ?? ''),
     }
     decisions.push(d)
+    nudged = true
     pending.push(d)
     $.ui.toast(`${d.level === 'undo' ? '🔴' : '🟡'} Critical decision [${d.area}] ${d.decision} — because ${d.reason}`, { timeoutMs: 20000 })
     $.ui.status(`⚠️ critical decision: ${d.decision.slice(0, 60)}`)
@@ -450,14 +458,25 @@ export const register: Register = on => {
   on('tool.call', async ($, e, next) => {
     const areas = touchedAreas(config, e.tool, e as unknown as Record<string, unknown>).filter(a => !warned.has(a))
     const r = await next(e)
-    if (!areas.length || r.deny !== undefined || r.isError === true) return r
-    areas.forEach(a => warned.add(a))
-    $.ui.toast(`⚠️ Critical area touched: ${areas.join(', ')}`, { timeoutMs: 8000 })
-    return { ...r, context: [...(r.context ?? []), reminder(areas, toolName)] } as typeof r
+    if (r.deny !== undefined || r.isError === true) return r
+    const notes: string[] = []
+    if (areas.length) {
+      areas.forEach(a => warned.add(a))
+      $.ui.toast(`⚠️ Critical area touched: ${areas.join(', ')}`, { timeoutMs: 8000 })
+      notes.push(reminder(areas, toolName))
+    }
+    const writes = EDIT_TOOLS.has(e.tool) || (e.tool.startsWith('mcp__') && !e.tool.startsWith(`mcp__${PLUGIN}__`))
+    if (writes && !nudged) {
+      nudged = true
+      notes.push(writeNudge(toolName))
+    }
+    if (!notes.length) return r
+    return { ...r, context: [...(r.context ?? []), ...notes] } as typeof r
   })
 
   on('turn.complete', async (_$, e, next) => {
     warned.clear()
+    nudged = false
     return next(e)
   })
 }
