@@ -3,13 +3,14 @@
 A Claude Code mod that keeps you in the loop when the agent makes a call you never asked for. It works for any kind of project: code, an article, a book, a dataset.
 
 - **The agent decides something on its own** that you did not literally ask for: it calls `record_decision` with the decision, the reason and the alternative it ruled out.
-- **Recorded decisions** show in a band above the prompt. The band stays until you dismiss it, across turns, so a decision does not scroll away unseen.
+- **Recorded decisions** show in a band above the prompt: red for what you may want to take back, yellow for what is worth knowing. The band stays until you dismiss it, across turns, so a decision does not scroll away unseen.
+- **Each decision has two buttons:** **rethink** sends it back to the agent ("undo it if you can, propose other ways, ask me first"); **not critical** takes it off and teaches the agent not to record its like again.
 - **Something you marked as critical is touched** (a file, a term, a command): you get a toast, and the agent is reminded to declare whether it was its own decision.
 
 ```
-⚠️ 2 critical decisions  [ok]  (or /critical-ok)
-  [14:32] (pricing) Rounded tax to 2 decimals — because the invoice shows 2
-  [14:40] (migrations) Made orders.status nullable — because old rows have none
+⚠️ Critical decisions: 1 to rethink · 1 to know  [ok]  (or /critical-ok)
+  [14:40] (migrations) Made orders.status nullable — because old rows have none  [rethink] [not critical]   ← red
+  [14:32] (pricing) Rounded tax to 2 decimals — because the invoice shows 2       [rethink] [not critical]   ← yellow
 ```
 
 ## Install
@@ -30,7 +31,7 @@ In the desktop app: click **+** next to the prompt box, then **Plugins**, **Add 
 
 ## Default protection
 
-It works without any setup. The agent is told that a decision is critical when it makes it on its own and it:
+It works without any setup. The agent is told to record a decision only when you would likely want to undo or rethink it if you saw it, and, when in doubt, not to record. That holds when it made the decision on its own and it:
 
 - adds, removes or swaps something you did not ask for: a topic, source, claim, comparison, feature, dependency or step;
 - picks a value, rule, formula, default, format, structure or schema you did not specify;
@@ -38,12 +39,16 @@ It works without any setup. The agent is told that a decision is critical when i
 - is hard to undo or reaches outside the session: deleting, overwriting, publishing, sending, deploying, migrating data, spending money;
 - fills a gap in your request with an assumption that changes the result.
 
+Naming, wording, formatting, refactors that keep behaviour, steps that follow straight from your request and choices that follow the project's conventions are not critical. Related choices go in one record.
+
 For example, you ask for a paragraph on wind power and the agent brings in solar panels as a comparison:
 
 ```
-⚠️ Critical decision  [ok]  (or /critical-ok)
-  [10:05] (general) Added a comparison with solar panels — because the paragraph needed a reference point
+⚠️ Critical decisions: 1 to rethink  [ok]  (or /critical-ok)
+  [10:05] (general) Added a comparison with solar panels — because the paragraph needed a reference point  [rethink] [not critical]
 ```
+
+If it records something you do not care about, press **not critical**. The mod keeps the last 10 such records per project and shows them to the agent as examples of what not to record.
 
 The first time it runs in a project, a line above the prompt says the default protection is on and how to make it yours.
 
@@ -51,7 +56,15 @@ The agent judges by itself whether a decision is critical: the mod gives it the 
 
 ## Configure
 
-Tell it what is critical for you, in your own words and in any language:
+Not sure what to write? Let the agent propose it:
+
+```
+/critical-areas auto
+```
+
+The agent uses what it already knows of the project, its instructions included, saves up to 6 areas and shows them to you. `/critical-areas clear` undoes it.
+
+Or tell it what is critical for you, in your own words and in any language:
 
 ```
 /critical-areas pricing and tax rules, anything in src/billing, the orders.status flow, SQL migrations
@@ -78,9 +91,10 @@ The configuration is saved per project directory and kept across sessions.
 
 | Command | What it does |
 | --- | --- |
+| `/critical-areas auto` | The agent proposes the areas and saves them |
 | `/critical-areas <text>` | Describe what is critical; replaces the current rules |
-| `/critical-areas` | Show the current rules |
-| `/critical-areas clear` | Remove them (`limpar` works too) |
+| `/critical-areas` | Show the current rules and what was marked as not critical |
+| `/critical-areas clear` | Remove the rules and the not-critical examples (`limpar` works too) |
 | `/critical-list` | List every decision recorded in this session |
 | `/critical-ok` | Dismiss the band (same as its **ok** button) |
 
@@ -96,8 +110,9 @@ It warns; it never blocks an edit.
 
 ## Access
 
-- **Model:** one Haiku call each time you run `/critical-areas <text>`, through your own Claude Code session. Nothing else is sent anywhere.
-- **Storage:** writes your rules, and that you saw the first-use line, to the plugin's own store, keyed by project directory.
+- **Model:** one Haiku call each time you run `/critical-areas <text>`, through your own Claude Code session. `/critical-areas auto` and **rethink** send one message to your own agent, only when you ask. Nothing else is sent anywhere.
+- **Tokens:** about 450 tokens of criteria in the system prompt, cached with it, plus up to about 200 for the not-critical examples. No reminder per turn; a toast's reminder only when an edit touches an area you marked.
+- **Storage:** writes your rules, the not-critical examples and that you saw the first-use line to the plugin's own store, keyed by project directory.
 - **Files and shell:** reads no files and runs no commands. When the default criteria point the agent to your project's instructions, those are the ones Claude Code already gave the agent; the mod does not open them.
 
 ## Develop

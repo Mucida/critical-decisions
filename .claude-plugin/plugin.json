@@ -1,7 +1,7 @@
 {
   "name": "critical-decisions",
-  "version": "0.2.0",
-  "description": "Shows you, in a band above the prompt, every critical decision the agent made without being asked, with why and what it ruled out. Works out of the box with default criteria for any kind of project; say what is critical for you with /critical-areas.",
+  "version": "0.3.0",
+  "description": "Shows you, above the prompt, the critical decisions the agent made without being asked: red to rethink, yellow to know, each with a rethink button. Works out of the box for any kind of project; /critical-areas auto lets the agent learn what is critical in yours.",
   "author": {
     "name": "Mucida",
     "url": "https://github.com/Mucida"

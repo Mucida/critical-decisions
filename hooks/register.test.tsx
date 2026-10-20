@@ -1,7 +1,9 @@
-import { test, expect } from 'claude-code/testing'
+import { test, expect, mock } from 'claude-code/testing'
 
 const TOOL = 'mcp__critical-decisions__record_decision'
-const g: { toasts: string[]; status: string | undefined; store: Map<string, unknown>; modelReply: string | null; asked: string[] } = {
+const SAVE = 'mcp__critical-decisions__save_critical_areas'
+const g: { toasts: string[]; status: string | undefined; store: Map<string, unknown>; modelReply: string | null; asked: string[]; submitted: any[] } = {
+  submitted: [],
   toasts: [],
   status: undefined,
   store: new Map(),
@@ -23,6 +25,7 @@ const base = (on: any, opts: { fail?: boolean } = {}) => {
   g.store = new Map()
   g.modelReply = AREAS_JSON
   g.asked = []
+  g.submitted = []
   on('tool.call', () => (opts.fail ? { isError: true, result: 'failed' } : { result: {}, text: 'ok' }))
   on('ui.toast', (_$: any, e: any) => {
     g.toasts.push(e.text)
@@ -50,10 +53,13 @@ const base = (on: any, opts: { fail?: boolean } = {}) => {
     }
   })
   on('session.start', (_$: any, e: any) => ({ cwd: e.cwd }))
-  on('tool.register', () => ({ value: { tool: TOOL } }))
+  on('tool.register', (_$: any, e: any) => ({ value: { tool: `mcp__critical-decisions__${e.name}` } }))
   on('command.register', () => ({ value: undefined }))
   on('turn.complete', (_$: any, e: any) => ({ text: e.answer }))
-  on('prompt.submit', (_$: any, e: any) => ({ text: e.text }))
+  on('prompt.submit', (_$: any, e: any) => {
+    g.submitted.push(e)
+    return { text: e.text }
+  })
   on('prompt.compose', () => ({ sections: [{ id: 'intro', text: 'base', scope: 'shared' }] }))
   on('ui.render', ($: any, e: any) => {
     const { Box } = $.ui.resolve(e)
@@ -229,7 +235,7 @@ test('record_decision warns the person and /critical-list lists it', async ($, o
     alternative_ruled_out: 'keep 4 decimals',
   } as any)
   expect(String(r.result).includes('recorded'), 'result').toBe(true)
-  expect(g.toasts[0].includes('CRITICAL DECISION'), 'toast').toBe(true)
+  expect(g.toasts[0].includes('Critical decision'), 'toast').toBe(true)
   expect(String(g.status).includes('Rounded'), 'status').toBe(true)
   const list = await cmd($, 'critical-list')
   expect(list.text.includes('keep 4 decimals'), 'list').toBe(true)
@@ -259,7 +265,7 @@ test('/critical-ok also clears; many decisions show the last 3 and count the res
   await start($)
   for (const n of ['d1', 'd2', 'd3', 'd4', 'd5']) await decide($, n)
   const t = await texts(await band($))
-  expect(t.includes('5 critical decisions'), t).toBe(true)
+  expect(t.includes('5 to know'), t).toBe(true)
   expect(t.includes('d5') && t.includes('d3') && !t.includes('d2'), t).toBe(true)
   expect(t.includes('+2'), t).toBe(true)
   const r = await cmd($, 'critical-ok')
@@ -309,4 +315,109 @@ test('without config /critical-areas explains the default protection', async ($,
   await start($)
   const t = (await cmd($, 'critical-areas')).text
   expect(t.includes('Default protection') && t.includes('/critical-areas <your words>'), t).toBe(true)
+})
+
+const decideAt = ($: any, decision: string, level?: string) =>
+  $.tool.call({ tool: TOOL, area: 'pricing', decision, reason: 'r', ...(level ? { level } : {}) } as any)
+const rowsOf = async (ui: any) =>
+  (await ui.findAll({ type: 'Text' })).map((x: any) => x.text).filter((t: string) => t.includes('] ('))
+
+test('levels: red "to rethink" rows come first, then yellow "to know", newest first; header counts both', async ($, on) => {
+  base(on)
+  await start($)
+  await decideAt($, 'k1')
+  await decideAt($, 'u1', 'undo')
+  await decideAt($, 'k2', 'know')
+  await decideAt($, 'u2', 'undo')
+  const ui = await band($)
+  const t = await texts(ui)
+  expect(t.includes('2 to rethink · 2 to know'), t).toBe(true)
+  const rows = await rowsOf(ui)
+  expect(rows.length, 'three rows').toBe(3)
+  expect(rows[0].includes('u2') && rows[1].includes('u1') && rows[2].includes('k2'), rows.join('|')).toBe(true)
+  const red = await ui.findAll({ type: 'Text', color: 'red' })
+  expect(red.some((x: any) => x.text.includes('u2')), 'undo is red').toBe(true)
+  expect((await cmd($, 'critical-list')).text.includes('to rethink (pricing) u1'), 'list shows the level').toBe(true)
+})
+
+test('an unknown or missing level is "know"', async ($, on) => {
+  base(on)
+  await start($)
+  await decideAt($, 'x', 'whatever')
+  expect((await texts(await band($))).includes('1 to know'), await texts(await band($))).toBe(true)
+})
+
+test('rethink sends the decision back to the agent as the person and takes the row off', async ($, on) => {
+  base(on)
+  await start($)
+  await decideAt($, 'Added solar panels', 'undo')
+  await decideAt($, 'Kept it short')
+  const ui = await band($)
+  await ui.press({ key: 'rethink-1' })
+  expect(g.submitted.length).toBe(1)
+  expect(g.submitted[0].text.includes('Added solar panels') && g.submitted[0].text.includes('ask me'), g.submitted[0].text).toBe(true)
+  const rows = await rowsOf(await band($))
+  expect(rows.length === 1 && rows[0].includes('Kept it short'), rows.join('|')).toBe(true)
+})
+
+test('not critical teaches the agent, keeps the last 10 per project, and clear forgets them', async ($, on) => {
+  base(on)
+  await start($)
+  for (let n = 1; n <= 12; n++) {
+    await decideAt($, `choice ${n}`)
+    await (await band($)).press({ key: `not-critical-${n}` })
+  }
+  const kept = g.store.get('learned:/proj') as any[]
+  expect(kept.length, 'capped').toBe(10)
+  expect(kept[0].decision, 'oldest dropped').toBe('choice 3')
+  const s = (await $.prompt.compose(COMPOSE)).sections.find((s: any) => s.id === 'critical-decisions:rules') as any
+  expect(s.text.includes('not critical') && s.text.includes('choice 12') && !s.text.includes('choice 2\n'), s.text).toBe(true)
+  expect((await cmd($, 'critical-areas')).text.includes('choice 12'), 'shown by /critical-areas').toBe(true)
+  expect((await rowsOf(await band($))).length, 'rows gone').toBe(0)
+  await start($, '/proj')
+  const again = (await $.prompt.compose(COMPOSE)).sections.find((s: any) => s.id === 'critical-decisions:rules') as any
+  expect(again.text.includes('choice 12'), 'survives a new session').toBe(true)
+  await cmd($, 'critical-areas', 'clear')
+  expect(g.store.has('learned:/proj'), 'clear forgets').toBe(false)
+  const after = (await $.prompt.compose(COMPOSE)).sections.find((s: any) => s.id === 'critical-decisions:rules') as any
+  expect(after.text.includes('choice 12'), 'gone from the prompt').toBe(false)
+})
+
+test('the default criteria carry the bar and what is not critical', async ($, on) => {
+  base(on)
+  await start($)
+  const s = (await $.prompt.compose(COMPOSE)).sections.find((s: any) => s.id === 'critical-decisions:rules') as any
+  expect(s.text.includes('When in doubt, do not record') && s.text.includes('Not critical:') && s.text.includes('"undo"'), s.text).toBe(true)
+})
+
+test('/critical-areas auto asks the agent, calls no model, and the notice names it', async ($, on) => {
+  base(on)
+  const clock = mock.clock(on)
+  await start($)
+  expect((await texts(await band($))).includes('/critical-areas auto'), 'notice').toBe(true)
+  const r = await cmd($, 'critical-areas', 'auto')
+  expect(g.submitted.length, 'not from inside the command').toBe(0)
+  await clock.advance(5)
+  expect(g.asked.length, 'no Haiku call').toBe(0)
+  expect(g.submitted.length === 1 && g.submitted[0].text.includes('save_critical_areas') && g.submitted[0].origin?.asUser === true, JSON.stringify(g.submitted)).toBe(true)
+  expect(r.text.includes('Asking'), r.text).toBe(true)
+})
+
+test('save_critical_areas saves valid areas, takes the notice down, and refuses empty input', async ($, on) => {
+  base(on)
+  await start($)
+  const bad = await $.tool.call({ tool: SAVE, description: 'x', areas: [{ name: 'a', keywords: [], paths: [] }] } as any)
+  expect(bad.isError, 'refused').toBe(true)
+  expect(String(bad.result).includes('again'), String(bad.result)).toBe(true)
+  expect(g.store.has('config:/proj')).toBe(false)
+  const ok = await $.tool.call({
+    tool: SAVE,
+    description: 'preços e publicação',
+    areas: [{ name: 'pricing', keywords: ['unit_price'], paths: [] }, { name: 'publishing', keywords: ['publish'], paths: ['posts/**'] }],
+  } as any)
+  expect(String(ok.result).includes('publishing'), String(ok.result)).toBe(true)
+  expect((g.store.get('config:/proj') as any).areas.length).toBe(2)
+  expect((await texts(await band($))).includes('default protection'), 'notice down').toBe(false)
+  await edit($, '/proj/posts/a.md', 'hello')
+  expect(g.toasts.some(t => t.includes('publishing')), 'areas active').toBe(true)
 })
