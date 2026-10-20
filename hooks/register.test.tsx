@@ -321,7 +321,7 @@ test('without config /critical-areas explains the default protection', async ($,
 const decideAt = ($: any, decision: string, level?: string) =>
   $.tool.call({ tool: TOOL, area: 'pricing', decision, reason: 'r', ...(level ? { level } : {}) } as any)
 const rowsOf = async (ui: any) =>
-  (await ui.findAll({ type: 'Text' })).map((x: any) => x.text).filter((t: string) => t.includes('] ('))
+  (await ui.findAll({ type: 'Text' })).map((x: any) => x.text).filter((t: string) => t.includes('The agent decided:'))
 
 test('levels: red "to rethink" rows come first, then yellow "to know", newest first; header counts both', async ($, on) => {
   base(on)
@@ -441,4 +441,16 @@ test('the first write of a turn nudges the agent to record, once, and not after 
   await endTurn($)
   expect((await edit($, '/proj/d.py', 'y')).context?.length, 'next turn again').toBe(1)
   expect(g.toasts.filter(t => t.startsWith('⚠️ Critical area')).length, 'the nudge never toasts').toBe(0)
+})
+
+test('a band row reads: what the agent decided, instead of what, and why below', async ($, on) => {
+  base(on)
+  await start($)
+  await $.tool.call({ tool: TOOL, area: 'pricing', decision: 'to use a 40% margin', reason: 'common in 3D printing', alternative_ruled_out: 'asking you for the margin', level: 'undo' } as any)
+  await decideAt($, 'to round to 2 decimals')
+  const t = await texts(await band($))
+  expect(t.includes('The agent decided:') && t.includes('to use a 40% margin'), t).toBe(true)
+  expect(t.includes('Instead of: asking you for the margin'), t).toBe(true)
+  expect(t.includes('Why: common in 3D printing'), t).toBe(true)
+  expect(t.split('Instead of:').length - 1, 'no "Instead of" without an alternative').toBe(1)
 })

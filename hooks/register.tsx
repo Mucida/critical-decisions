@@ -236,12 +236,14 @@ export const register: Register = on => {
           },
           decision: {
             type: 'string',
-            description: 'What you decided, in one sentence. Example: "Added a comparison with solar panels to the paragraph on wind power".',
+            description:
+              'What you decided, in one sentence that starts with a verb and reads after "The agent decided:". Example: "to add a comparison with solar panels to the paragraph on wind power".',
           },
           reason: { type: 'string', description: 'Why, in one sentence. Example: "the paragraph needed a reference point".' },
           alternative_ruled_out: {
             type: 'string',
-            description: 'What you considered and did not do. Example: "keep the paragraph on wind power alone".',
+            description:
+              'What the user asked for, or what you would otherwise have done, that this decision replaces. Shown to the user as "Instead of: ...". Example: "only the paragraph on wind power, as asked".',
           },
           level: {
             type: 'string',
@@ -382,8 +384,14 @@ export const register: Register = on => {
           <Text dimColor>  (or /critical-ok)</Text>
         </Box>
         {shown.map(d => (
-          <Box key={`row-${d.id}`}>
-            <Text color={d.level === 'undo' ? 'red' : 'yellow'}>  [{d.time}] ({d.area}) {d.decision} <Text dimColor>— because {d.reason}  </Text></Text>
+          <Box key={`row-${d.id}`} flexDirection="column">
+            <Text color={d.level === 'undo' ? 'red' : 'yellow'}>
+              {'  '}[{d.time}] The agent decided: <Text bold>{d.decision}</Text>
+            </Text>
+            {d.alternative ? <Text dimColor>{'     '}Instead of: {d.alternative}</Text> : null}
+            <Text dimColor>{'     '}Why: {d.reason}</Text>
+            <Box>
+            <Text>{'     '}</Text>
             <Button
               key={`rethink-${d.id}`}
               label="rethink"
@@ -402,6 +410,8 @@ export const register: Register = on => {
                 await $.store.set(learnedKey(cwd), learned)
               }}
             />
+            <Text dimColor>  ({d.area})</Text>
+            </Box>
           </Box>
         ))}
         {hidden ? <Text dimColor>  +{hidden} more: /critical-list</Text> : null}

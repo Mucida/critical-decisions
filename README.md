@@ -9,8 +9,13 @@ A Claude Code mod that keeps you in the loop when the agent makes a call you nev
 
 ```
 ⚠️ Critical decisions: 1 to rethink · 1 to know  [ok]  (or /critical-ok)
-  [14:40] (migrations) Made orders.status nullable — because old rows have none  [rethink] [not critical]   ← red
-  [14:32] (pricing) Rounded tax to 2 decimals — because the invoice shows 2       [rethink] [not critical]   ← yellow
+  [14:40] The agent decided: to make orders.status nullable                ← red
+     Instead of: keeping it required, as it was
+     Why: old rows have no status
+     [rethink] [not critical]  (migrations)
+  [14:32] The agent decided: to round tax to 2 decimals                    ← yellow
+     Why: the invoice shows 2
+     [rethink] [not critical]  (pricing)
 ```
 
 ## Install
@@ -47,7 +52,10 @@ For example, you ask for a paragraph on wind power and the agent brings in solar
 
 ```
 ⚠️ Critical decisions: 1 to rethink  [ok]  (or /critical-ok)
-  [10:05] (general) Added a comparison with solar panels — because the paragraph needed a reference point  [rethink] [not critical]
+  [10:05] The agent decided: to add a comparison with solar panels
+     Instead of: only the paragraph on wind power, as asked
+     Why: the paragraph needed a reference point
+     [rethink] [not critical]  (general)
 ```
 
 If it records something you do not care about, press **not critical**. The mod keeps the last 10 such records per project and shows them to the agent as examples of what not to record.

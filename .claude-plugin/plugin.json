@@ -1,6 +1,6 @@
 {
   "name": "critical-decisions",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Shows you, above the prompt, the critical decisions the agent made without being asked: red to rethink, yellow to know, each with a rethink button. Works out of the box for any kind of project; /critical-areas auto lets the agent learn what is critical in yours.",
   "author": {
     "name": "Mucida",
