@@ -127,6 +127,10 @@ claude plugin validate .
 claude plugin test .
 ```
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). Bugs and ideas: [issues](https://github.com/Mucida/critical-decisions/issues).
+
 ## License
 
 MIT
