@@ -39,6 +39,8 @@ It works without any setup. The agent is told to record a decision only when you
 - is hard to undo or reaches outside the session: deleting, overwriting, publishing, sending, deploying, migrating data, spending money;
 - fills a gap in your request with an assumption that changes the result.
 
+A choice you left to the agent ("you decide") still counts when it changes the result: you delegated it, so you get told what it picked.
+
 Naming, wording, formatting, refactors that keep behaviour, steps that follow straight from your request and choices that follow the project's conventions are not critical. Related choices go in one record.
 
 For example, you ask for a paragraph on wind power and the agent brings in solar panels as a comparison:

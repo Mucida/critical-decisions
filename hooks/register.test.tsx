@@ -387,7 +387,7 @@ test('the default criteria carry the bar and what is not critical', async ($, on
   base(on)
   await start($)
   const s = (await $.prompt.compose(COMPOSE)).sections.find((s: any) => s.id === 'critical-decisions:rules') as any
-  expect(s.text.includes('When in doubt, do not record') && s.text.includes('Not critical:') && s.text.includes('"undo"'), s.text).toBe(true)
+  expect(s.text.includes('When in doubt, do not record') && s.text.includes('you decide') && s.text.includes('Not critical:') && s.text.includes('"undo"'), s.text).toBe(true)
 })
 
 test('/critical-areas auto asks the agent, calls no model, and the notice names it', async ($, on) => {

@@ -142,6 +142,7 @@ const DEFAULT_CRITERIA = [
   "- departs from or works around the user's instructions, or the project's own instructions you were given (such as CLAUDE.md);",
   '- is hard to undo or reaches outside this session: deleting, overwriting, publishing, sending, deploying, migrating data, spending money;',
   '- fills a gap in the request with an assumption that changes the result.',
+  'A choice the user left to you ("you decide", "pick one") still qualifies when it changes the result: they delegated it, so tell them what you picked.',
   "Not critical: naming, wording and formatting, refactors that keep behaviour, steps that follow directly from the request, and choices that follow the project's conventions.",
   'Group related choices into one record. Judge what matters with what you know of this project, its instructions included.',
   'level "undo" when the user may well want it taken back (it changes scope, a rule or the result, or is hard to undo); "know" when it is a reasonable choice they should just be aware of.',
