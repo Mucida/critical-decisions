@@ -1,7 +1,7 @@
 {
   "name": "critical-decisions",
-  "version": "0.1.0",
-  "description": "Tell it what is critical in your project with /alert-config. When the agent touches it, you get warned, and the agent records the decision, why it made it and what it ruled out, in a band that stays until you dismiss it.",
+  "version": "0.2.0",
+  "description": "Shows you, in a band above the prompt, every critical decision the agent made without being asked, with why and what it ruled out. Works out of the box with default criteria for any kind of project; say what is critical for you with /critical-areas.",
   "author": {
     "name": "Mucida",
     "url": "https://github.com/Mucida"

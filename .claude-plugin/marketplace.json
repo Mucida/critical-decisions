@@ -1,5 +1,13 @@
 {
   "name": "critical-decisions",
-  "owner": { "name": "Mucida" },
-  "plugins": [{ "name": "critical-decisions", "source": "./" }]
+  "owner": {
+    "name": "Mucida"
+  },
+  "plugins": [
+    {
+      "name": "critical-decisions",
+      "source": "./"
+    }
+  ],
+  "description": "critical-decisions: see the decisions your agent made without being asked."
 }

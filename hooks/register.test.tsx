@@ -117,12 +117,34 @@ test('path or keyword match warns the person and reminds the agent', async ($, o
   }
 })
 
-test('unrelated edits, prose files and failed edits stay quiet', async ($, on) => {
+test('unrelated edits stay quiet', async ($, on) => {
   base(on)
   await configure($)
   await edit($, '/proj/src/ui/Button.tsx', 'const label = "ok"')
-  await edit($, '/proj/README.md', 'we store unit_price here')
+  await $.tool.call({ tool: 'Read', file_path: '/proj/src/billing/a.ts' } as any)
   expect(g.toasts.length).toBe(0)
+})
+
+test('prose counts: a writing project is matched by keyword too', async ($, on) => {
+  base(on)
+  await configure($)
+  await edit($, '/proj/drafts/article.md', 'the unit_price went up')
+  expect(g.toasts.length).toBe(1)
+})
+
+test('shell commands and MCP tools are matched by keyword, never by path, and the own tool is ignored', async ($, on) => {
+  base(on)
+  await configure($)
+  await $.tool.call({ tool: 'Bash', command: 'ls src/billing' } as any)
+  expect(g.toasts.length, 'a path in a command is not a path match').toBe(0)
+  await $.tool.call({ tool: 'Bash', command: "psql -c 'update items set unit_price = 3'" } as any)
+  expect(g.toasts.length, 'bash keyword').toBe(1)
+  await endTurn($)
+  await $.tool.call({ tool: 'mcp__shop__update_product', fields: { tax_rate: 0.2 } } as any)
+  expect(g.toasts.length, 'mcp keyword').toBe(2)
+  await endTurn($)
+  await $.tool.call({ tool: TOOL, area: 'pricing', decision: 'set tax_rate', reason: 'r' } as any)
+  expect(g.toasts.filter(t => t.startsWith('⚠️ Critical area')).length, 'own tool').toBe(2)
 })
 
 test('a failed edit does not warn', async ($, on) => {
@@ -150,16 +172,19 @@ test('same area warns once per turn', async ($, on) => {
   expect(g.toasts.length, 'new turn').toBe(2)
 })
 
-test('the system prompt carries the rules only when configured', async ($, on) => {
+test('the system prompt always carries the default criteria; config adds the person\'s areas', async ($, on) => {
   base(on)
   await start($)
   let r = await $.prompt.compose(COMPOSE)
-  expect(r.sections.some((s: any) => s.id === 'critical-decisions:rules')).toBe(false)
+  let s = r.sections.find((s: any) => s.id === 'critical-decisions:rules') as any
+  expect(s?.scope, 'session section').toBe('session')
+  expect(s.text.includes('did not ask for') && s.text.includes('CLAUDE.md') && s.text.includes('record_decision'), s.text).toBe(true)
+  expect(s.text.includes('has not said what is critical'), 'says it is the default').toBe(true)
   await cmd($, 'critical-areas', 'prices and taxes')
   r = await $.prompt.compose(COMPOSE)
-  const s = r.sections.find((s: any) => s.id === 'critical-decisions:rules') as any
-  expect(s?.scope, 'session section').toBe('session')
-  expect(s.text.includes('prices and taxes') && s.text.includes('record_decision'), s?.text).toBe(true)
+  s = r.sections.find((s: any) => s.id === 'critical-decisions:rules') as any
+  expect(s.text.includes('prices and taxes') && s.text.includes('pricing') && s.text.includes('did not ask for'), s.text).toBe(true)
+  expect(s.text.includes('has not said'), 'no default-only line once configured').toBe(false)
 })
 
 test('model failure or unreadable answer saves nothing and keeps the old config', async ($, on) => {
@@ -240,4 +265,48 @@ test('/critical-ok also clears; many decisions show the last 3 and count the res
   const r = await cmd($, 'critical-ok')
   expect(r.text.includes('5'), r.text).toBe(true)
   expect((await texts(await band($))).includes('decision'), 'empty').toBe(false)
+})
+
+test('record_decision without a decision or reason records nothing and says how to fix it', async ($, on) => {
+  base(on)
+  await start($)
+  const r = await $.tool.call({ tool: TOOL, area: 'pricing', decision: ' ', reason: 'r' } as any)
+  expect(r.isError, 'error').toBe(true)
+  expect(String(r.result).includes('again'), String(r.result)).toBe(true)
+  expect(g.toasts.length).toBe(0)
+  await $.tool.call({ tool: TOOL, decision: 'Added a comparison', reason: 'context' } as any)
+  expect((await cmd($, 'critical-list')).text.includes('(general)'), 'area defaults to general').toBe(true)
+})
+
+test('first use shows the default-protection notice until ok, once per project', async ($, on) => {
+  base(on)
+  await start($)
+  let ui = await band($)
+  expect((await texts(ui)).includes('default protection'), await texts(ui)).toBe(true)
+  await ui.press({ key: 'ok' })
+  expect((await texts(await band($))).includes('default protection'), 'gone after ok').toBe(false)
+  expect(g.store.get('notice-seen:/proj'), 'remembered').toBe(true)
+  await start($, '/proj')
+  expect((await texts(await band($))).includes('default protection'), 'not again in this project').toBe(false)
+  await start($, '/other')
+  expect((await texts(await band($))).includes('default protection'), 'shown in another project').toBe(true)
+})
+
+test('configuring or /critical-ok takes the notice down; a configured project never shows it', async ($, on) => {
+  base(on)
+  await start($)
+  await cmd($, 'critical-areas', 'prices')
+  expect((await texts(await band($))).includes('default protection'), 'configured').toBe(false)
+  await start($, '/other')
+  await cmd($, 'critical-ok')
+  expect((await texts(await band($))).includes('default protection'), 'critical-ok').toBe(false)
+  await start($, '/proj')
+  expect((await texts(await band($))).includes('default protection'), 'configured project on restart').toBe(false)
+})
+
+test('without config /critical-areas explains the default protection', async ($, on) => {
+  base(on)
+  await start($)
+  const t = (await cmd($, 'critical-areas')).text
+  expect(t.includes('Default protection') && t.includes('/critical-areas <your words>'), t).toBe(true)
 })
